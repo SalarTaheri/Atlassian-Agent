@@ -31,7 +31,7 @@ jobs:
         id: tag_step
         run: |
           TAG="v${{ github.run_number }}"
-          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git tag $TAG
@@ -44,8 +44,8 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.TAG }}
-          name: Release ${{ env.TAG }}
+          tag_name: ${{ steps.tag_step.outputs.tag_name }}
+          name: Release ${{ steps.tag_step.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -56,5 +56,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: target/*.jar
+          tag_name: ${{ steps.tag_step.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
