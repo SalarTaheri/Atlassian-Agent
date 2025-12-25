@@ -1,4 +1,4 @@
-name: Java CI with Maven and Release
+name: Java CI with Maven and Auto Release
 
 on:
   push:
@@ -11,6 +11,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # IMPORTANT: required to push tags
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -20,10 +22,39 @@ jobs:
           cache: maven
 
       - name: Build with Maven
-        run: mvn package
+        run: mvn -B package --file pom.xml
 
-      - name: Auto Release (by PSModule)
-        # You may pin to the exact commit or the version.
-        # uses: PSModule/Auto-Release@fa6ac2f6fefd044e80d60f5cfcfe8dd3bd3cb670
-        uses: PSModule/Auto-Release@v1.7.14
-          
+      # -----------------------------
+      # Create a version tag
+      # -----------------------------
+      - name: Create Tag
+        id: tag_step
+        run: |
+          TAG="v${{ github.run_number }}"
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag $TAG
+          git push origin $TAG
+
+      # -----------------------------
+      # Create GitHub Release
+      # -----------------------------
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: Release ${{ env.TAG }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # -----------------------------
+      # Upload JAR to Release
+      # -----------------------------
+      - name: Upload JAR to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/*.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
